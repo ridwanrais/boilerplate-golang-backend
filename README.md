@@ -67,7 +67,8 @@ This project uses a "schema-first" approach via [Ent](https://entgo.io/).
    ```bash
    make migrate name=describe_your_changes
    ```
-   *Atlas will compare your Go schema against the current migrations and spin up a lightweight throwaway Docker Postgres container to generate a perfect Postgres-compatible `.sql` diff inside `ent/migrate/migrations/`.*
+   > [!NOTE]
+   > **This command does not change your actual database.** It only spins up a temporary throwaway database to compare schemas and generate the new `.sql` diff inside `ent/migrate/migrations/`.
 
 ---
 
