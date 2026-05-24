@@ -3,7 +3,7 @@
 This project is a production-ready Golang boilerplate organized using **Clean Architecture** principles and utilizing **PostgreSQL** via Docker Compose.
 
 It is built using the following core frameworks:
-- [**Gin**](https://gin-gonic.com/) - High-performance HTTP routing
+- **`net/http`** - Go's fast standard library HTTP routing
 - [**Huma**](https://huma.rocks/) - Modern OpenAPI 3/Swagger generation and request/response validation
 - [**Ent**](https://entgo.io/) - Entity-graph ORM for modeling schemas as Go code
 - [**Atlas**](https://atlasgo.io/) - Declarative and versioned database schema migration tool

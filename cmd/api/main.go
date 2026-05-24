@@ -10,9 +10,10 @@ import (
 	"backend-golang/internal/repository"
 	"backend-golang/internal/usecase"
 
+	"net/http"
+
 	"github.com/danielgtaylor/huma/v2"
-	"github.com/danielgtaylor/huma/v2/adapters/humagin"
-	"github.com/gin-gonic/gin"
+	"github.com/danielgtaylor/huma/v2/adapters/humago"
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
 )
@@ -31,12 +32,12 @@ func main() {
 	}
 	defer client.Close()
 
-	// 2. Setup Gin Router
-	router := gin.Default()
+	// 2. Setup Standard Library Router
+	router := http.NewServeMux()
 
-	// 3. Setup Huma API on top of Gin
+	// 3. Setup Huma API on top of standard ServeMux
 	config := huma.DefaultConfig("Backend API Boilerplate", "1.0.0")
-	api := humagin.New(router, config)
+	api := humago.New(router, config)
 
 	// 4. Wire dependencies (Clean Architecture)
 	userRepo := repository.NewUserEntRepository(client)
@@ -48,7 +49,7 @@ func main() {
 	// 6. Start Server
 	log.Println("Server is running on http://localhost:8080")
 	log.Println("Swagger UI is available at http://localhost:8080/docs")
-	if err := router.Run(":8080"); err != nil {
+	if err := http.ListenAndServe(":8080", router); err != nil {
 		log.Fatalf("failed to run server: %v", err)
 	}
 }
