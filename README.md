@@ -95,10 +95,11 @@ make apply
 
 You do **not** need to manually manage OpenAPI or Swagger YAML files! 🎉
 
-This project uses **Huma** tightly integrated with Gin. The documentation is automatically generated at runtime based on the Go structs you define for your HTTP Handlers and the `doc`, `example`, and validation tags attached to them.
+This project uses **Huma** tightly integrated with standard `net/http`. The documentation is automatically generated at runtime based on the Go structs you define for your HTTP Handlers and the `doc`, `example`, and validation tags attached to them.
 
 **To view the API Docs:**
 1. Start the server (`make run`).
-2. Open your browser and navigate to: [http://localhost:8080/docs](http://localhost:8080/docs).
+2. Open your browser and navigate to the Swagger UI: [http://localhost:8080/docs](http://localhost:8080/docs).
+3. Alternatively, you can view the raw OpenAPI JSON specification at: [http://localhost:8080/openapi.json](http://localhost:8080/openapi.json).
 
 If you want to add a new route to the documentation, simply use `huma.Register` in `internal/delivery/http/user_handler.go` and define your request/response struct types. Huma handles the rest!

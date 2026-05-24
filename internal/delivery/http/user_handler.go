@@ -91,7 +91,11 @@ func RegisterUserRoutes(api huma.API, userUC domain.UserUsecase) {
 			return nil, huma.Error500InternalServerError("failed to fetch users", err)
 		}
 		resp := &ListUsersResponse{}
-		resp.Body.Data = users
+		if users == nil {
+			resp.Body.Data = make([]*domain.User, 0)
+		} else {
+			resp.Body.Data = users
+		}
 		return resp, nil
 	})
 
