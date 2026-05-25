@@ -10,6 +10,23 @@ It is built using the following core frameworks:
 
 ---
 
+## Directory Structure
+
+This project follows a strict layered architecture to guarantee separation of concerns and prevent circular dependencies:
+
+```text
+.
+├── cmd/api/                 # Application entry point (main.go) and dependency wiring
+├── ent/                     # Database schemas, migrations, and generated ORM code
+└── internal/
+    ├── delivery/http/       # HTTP handlers, routing, and request/response validation
+    ├── domain/              # Core business structs AND interfaces (e.g., UserRepository, UserUsecase interfaces live here)
+    ├── repository/          # Concrete implementations (e.g., user_ent.go implements domain.UserRepository)
+    └── usecase/             # Business logic implementations (e.g., user_usecase.go implements domain.UserUsecase)
+```
+
+---
+
 ## 1. First Time Setup
 
 To get this project running locally for the first time, follow these steps:
