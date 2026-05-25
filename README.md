@@ -22,6 +22,8 @@ To get this project running locally for the first time, follow these steps:
    ```bash
    docker-compose up -d
    ```
+   > [!TIP]
+   > This project's Docker Compose setup is fully compatible with [OrbStack](https://orbstack.dev/)! If you are on a Mac, OrbStack is highly recommended as a much faster and lighter drop-in replacement for Docker Desktop.
 
 2. **Configure Environment Variables:**
    Copy the example environment file.
