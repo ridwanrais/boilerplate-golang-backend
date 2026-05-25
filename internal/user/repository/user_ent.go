@@ -5,6 +5,7 @@ import (
 	"errors"
 
 	"backend-golang/ent"
+	entuser "backend-golang/ent/user"
 	"backend-golang/internal/user"
 
 	"github.com/google/uuid"
@@ -25,6 +26,7 @@ func (r *entRepository) Create(ctx context.Context, u *user.User) (*user.User, e
 		Create().
 		SetName(u.Name).
 		SetEmail(u.Email).
+		SetPassword(u.Password).
 		Save(ctx)
 
 	if err != nil {
@@ -36,6 +38,18 @@ func (r *entRepository) Create(ctx context.Context, u *user.User) (*user.User, e
 
 func (r *entRepository) GetByID(ctx context.Context, id uuid.UUID) (*user.User, error) {
 	entUser, err := r.client.User.Get(ctx, id)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, errors.New("user not found")
+		}
+		return nil, err
+	}
+
+	return toDomainUser(entUser), nil
+}
+
+func (r *entRepository) GetByEmail(ctx context.Context, email string) (*user.User, error) {
+	entUser, err := r.client.User.Query().Where(entuser.Email(email)).Only(ctx)
 	if err != nil {
 		if ent.IsNotFound(err) {
 			return nil, errors.New("user not found")
@@ -79,6 +93,7 @@ func toDomainUser(u *ent.User) *user.User {
 		ID:        u.ID,
 		Name:      u.Name,
 		Email:     u.Email,
+		Password:  u.Password,
 		CreatedAt: u.CreatedAt,
 	}
 }

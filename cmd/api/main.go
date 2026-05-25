@@ -6,6 +6,8 @@ import (
 	"os"
 
 	"backend-golang/ent"
+	authhttp "backend-golang/internal/auth/delivery/http"
+	authuc "backend-golang/internal/auth/usecase"
 	userhttp "backend-golang/internal/user/delivery/http"
 	userrepo "backend-golang/internal/user/repository"
 	useruc "backend-golang/internal/user/usecase"
@@ -37,14 +39,29 @@ func main() {
 
 	// 3. Setup Huma API on top of standard ServeMux
 	config := huma.DefaultConfig("Backend API Boilerplate", "1.0.0")
+	
+	// Add security scheme to API config
+	config.Components.SecuritySchemes = map[string]*huma.SecurityScheme{
+		"bearerAuth": {
+			Type:         "http",
+			Scheme:       "bearer",
+			BearerFormat: "JWT",
+		},
+	}
+	
 	api := humago.New(router, config)
 
 	// 4. Wire dependencies (Feature Modules)
 	userRepo := userrepo.NewEntRepository(client)
-	userUC := useruc.NewUsecase(userRepo)
+	
+	authUC := authuc.NewUsecase(userRepo)
+	myUserUC := useruc.NewMyUsecase(userRepo)
+	publicUserUC := useruc.NewPublicUsecase(userRepo)
 
 	// 5. Register Routes
-	userhttp.RegisterRoutes(api, userUC)
+	authhttp.RegisterRoutes(api, authUC)
+	userhttp.RegisterMyUserRoutes(api, myUserUC)
+	userhttp.RegisterPublicUserRoutes(api, publicUserUC)
 
 	// 6. Start Server
 	log.Println("Server is running on http://localhost:8080")

@@ -10,9 +10,11 @@ import (
 	"time"
 
 	"backend-golang/ent"
+	authhttp "backend-golang/internal/auth/delivery/http"
+	authuc "backend-golang/internal/auth/usecase"
+	userhttp "backend-golang/internal/user/delivery/http"
 	userrepo "backend-golang/internal/user/repository"
 	useruc "backend-golang/internal/user/usecase"
-	userhttp "backend-golang/internal/user/delivery/http"
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/danielgtaylor/huma/v2/adapters/humago"
@@ -22,7 +24,7 @@ import (
 	"github.com/testcontainers/testcontainers-go/wait"
 )
 
-func TestUserAPI_Integration(t *testing.T) {
+func TestUserAndAuthAPI_Integration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping API integration test")
 	}
@@ -64,20 +66,27 @@ func TestUserAPI_Integration(t *testing.T) {
 
 	// Wire the application
 	userRepo := userrepo.NewEntRepository(client)
-	userUC := useruc.NewUsecase(userRepo)
+	
+	authUC := authuc.NewUsecase(userRepo)
+	myUserUC := useruc.NewMyUsecase(userRepo)
+	publicUserUC := useruc.NewPublicUsecase(userRepo)
 
 	router := http.NewServeMux()
 	config := huma.DefaultConfig("Test API", "1.0.0")
 	api := humago.New(router, config)
 
-	userhttp.RegisterRoutes(api, userUC)
+	authhttp.RegisterRoutes(api, authUC)
+	userhttp.RegisterMyUserRoutes(api, myUserUC)
+	userhttp.RegisterPublicUserRoutes(api, publicUserUC)
 
 	ts := httptest.NewServer(router)
 	defer ts.Close()
 
-	t.Run("Create and Get User via API", func(t *testing.T) {
-		reqBody := []byte(`{"name":"API Test User","email":"api@test.com"}`)
-		resp, err := http.Post(ts.URL+"/users", "application/json", bytes.NewBuffer(reqBody))
+	var jwtToken string
+
+	t.Run("Register User", func(t *testing.T) {
+		reqBody := []byte(`{"name":"Auth User","email":"auth@test.com","password":"securepassword123"}`)
+		resp, err := http.Post(ts.URL+"/auth/register", "application/json", bytes.NewBuffer(reqBody))
 		if err != nil {
 			t.Fatalf("failed to make POST request: %v", err)
 		}
@@ -86,42 +95,83 @@ func TestUserAPI_Integration(t *testing.T) {
 		if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
 			t.Fatalf("expected status OK/Created, got %d", resp.StatusCode)
 		}
+	})
 
-		var createResp struct {
-			Data struct {
-				ID    string `json:"id"`
-				Name  string `json:"name"`
-				Email string `json:"email"`
-			} `json:"data"`
+	t.Run("Login User", func(t *testing.T) {
+		reqBody := []byte(`{"email":"auth@test.com","password":"securepassword123"}`)
+		resp, err := http.Post(ts.URL+"/auth/login", "application/json", bytes.NewBuffer(reqBody))
+		if err != nil {
+			t.Fatalf("failed to make POST request: %v", err)
 		}
-		if err := json.NewDecoder(resp.Body).Decode(&createResp); err != nil {
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusOK {
+			t.Fatalf("expected status OK, got %d", resp.StatusCode)
+		}
+
+		var actualResp struct {
+			Token string `json:"token"`
+		}
+		if err := json.NewDecoder(resp.Body).Decode(&actualResp); err != nil {
 			t.Fatalf("failed to decode response: %v", err)
 		}
-		if createResp.Data.Name != "API Test User" {
-			t.Errorf("expected name API Test User, got %s", createResp.Data.Name)
+		
+		if actualResp.Token == "" {
+			t.Fatalf("expected token, got empty string")
 		}
+		jwtToken = actualResp.Token
+	})
 
-		getResp, err := http.Get(ts.URL + "/users/" + createResp.Data.ID)
+	t.Run("Get My Profile (Protected)", func(t *testing.T) {
+		req, _ := http.NewRequest(http.MethodGet, ts.URL+"/users/me", nil)
+		req.Header.Set("Authorization", "Bearer "+jwtToken)
+		
+		resp, err := http.DefaultClient.Do(req)
 		if err != nil {
 			t.Fatalf("failed to make GET request: %v", err)
 		}
-		defer getResp.Body.Close()
+		defer resp.Body.Close()
 
-		if getResp.StatusCode != http.StatusOK {
-			t.Fatalf("expected status OK, got %d", getResp.StatusCode)
+		if resp.StatusCode != http.StatusOK {
+			t.Fatalf("expected status OK, got %d", resp.StatusCode)
 		}
 
 		var fetchResp struct {
 			Data struct {
-				ID    string `json:"id"`
 				Email string `json:"email"`
 			} `json:"data"`
 		}
-		if err := json.NewDecoder(getResp.Body).Decode(&fetchResp); err != nil {
+		if err := json.NewDecoder(resp.Body).Decode(&fetchResp); err != nil {
 			t.Fatalf("failed to decode get response: %v", err)
 		}
-		if fetchResp.Data.Email != "api@test.com" {
-			t.Errorf("expected email api@test.com, got %s", fetchResp.Data.Email)
+		if fetchResp.Data.Email != "auth@test.com" {
+			t.Errorf("expected email auth@test.com, got %s", fetchResp.Data.Email)
+		}
+	})
+
+	t.Run("Get My Profile (Unauthorized)", func(t *testing.T) {
+		req, _ := http.NewRequest(http.MethodGet, ts.URL+"/users/me", nil)
+		
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			t.Fatalf("failed to make GET request: %v", err)
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusUnauthorized && resp.StatusCode != 422 { // Huma might throw 422 if header is required
+			t.Fatalf("expected status 401 or 422, got %d", resp.StatusCode)
+		}
+	})
+
+	t.Run("List Users (Public)", func(t *testing.T) {
+		resp, err := http.Get(ts.URL + "/users")
+		if err != nil {
+			t.Fatalf("failed to make GET request: %v", err)
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusOK {
+			t.Fatalf("expected status OK, got %d", resp.StatusCode)
 		}
 	})
 }

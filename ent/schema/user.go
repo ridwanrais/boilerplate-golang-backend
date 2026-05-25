@@ -21,6 +21,7 @@ func (User) Fields() []ent.Field {
 			StorageKey("id"),
 		field.String("name").NotEmpty(),
 		field.String("email").Unique().NotEmpty(),
+		field.String("password").NotEmpty().Sensitive(),
 		field.Time("created_at").Default(time.Now).Immutable(),
 	}
 }
