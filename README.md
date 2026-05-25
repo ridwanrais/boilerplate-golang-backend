@@ -19,10 +19,14 @@ This project follows a strict layered architecture to guarantee separation of co
 ├── cmd/api/                 # Application entry point (main.go) and dependency wiring
 ├── ent/                     # Database schemas, migrations, and generated ORM code
 └── internal/
-    ├── delivery/http/       # HTTP handlers, routing, and request/response validation
-    ├── domain/              # Core business structs AND interfaces (e.g., UserRepository, UserUsecase interfaces live here)
-    ├── repository/          # Concrete implementations (e.g., user_ent.go implements domain.UserRepository)
-    └── usecase/             # Business logic implementations (e.g., user_usecase.go implements domain.UserUsecase)
+    └── user/                # User Feature Module
+        ├── user.go          # Core business structs and interfaces (e.g. user.User, user.Repository)
+        ├── repository/      
+        │   └── user_ent.go  # Concrete data access implementation (Ent)
+        ├── usecase/         
+        │   └── user.go      # Business logic implementation
+        └── delivery/http/   
+            └── user.go      # HTTP handlers and routing
 ```
 
 ---

@@ -10,9 +10,9 @@ import (
 	"time"
 
 	"backend-golang/ent"
-	deliveryHTTP "backend-golang/internal/delivery/http"
-	"backend-golang/internal/repository"
-	"backend-golang/internal/usecase"
+	userrepo "backend-golang/internal/user/repository"
+	useruc "backend-golang/internal/user/usecase"
+	userhttp "backend-golang/internal/user/delivery/http"
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/danielgtaylor/huma/v2/adapters/humago"
@@ -29,7 +29,6 @@ func TestUserAPI_Integration(t *testing.T) {
 
 	ctx := context.Background()
 
-	// 1. Start PostgreSQL container
 	pgContainer, err := postgres.Run(ctx,
 		"postgres:15-alpine",
 		postgres.WithDatabase("test-db"),
@@ -63,23 +62,20 @@ func TestUserAPI_Integration(t *testing.T) {
 		t.Fatalf("failed creating schema resources: %v", err)
 	}
 
-	// 2. Wire the application exactly like main.go
-	userRepo := repository.NewUserEntRepository(client)
-	userUC := usecase.NewUserUsecase(userRepo)
+	// Wire the application
+	userRepo := userrepo.NewEntRepository(client)
+	userUC := useruc.NewUsecase(userRepo)
 
 	router := http.NewServeMux()
 	config := huma.DefaultConfig("Test API", "1.0.0")
 	api := humago.New(router, config)
 
-	deliveryHTTP.RegisterUserRoutes(api, userUC)
+	userhttp.RegisterRoutes(api, userUC)
 
-	// 3. Start test HTTP server
 	ts := httptest.NewServer(router)
 	defer ts.Close()
 
-	// 4. Test the API Endpoints via actual HTTP requests!
 	t.Run("Create and Get User via API", func(t *testing.T) {
-		// Test Create
 		reqBody := []byte(`{"name":"API Test User","email":"api@test.com"}`)
 		resp, err := http.Post(ts.URL+"/users", "application/json", bytes.NewBuffer(reqBody))
 		if err != nil {
@@ -105,7 +101,6 @@ func TestUserAPI_Integration(t *testing.T) {
 			t.Errorf("expected name API Test User, got %s", createResp.Data.Name)
 		}
 
-		// Test GetByID
 		getResp, err := http.Get(ts.URL + "/users/" + createResp.Data.ID)
 		if err != nil {
 			t.Fatalf("failed to make GET request: %v", err)

@@ -6,9 +6,9 @@ import (
 	"os"
 
 	"backend-golang/ent"
-	deliveryHTTP "backend-golang/internal/delivery/http"
-	"backend-golang/internal/repository"
-	"backend-golang/internal/usecase"
+	userhttp "backend-golang/internal/user/delivery/http"
+	userrepo "backend-golang/internal/user/repository"
+	useruc "backend-golang/internal/user/usecase"
 
 	"net/http"
 
@@ -39,12 +39,12 @@ func main() {
 	config := huma.DefaultConfig("Backend API Boilerplate", "1.0.0")
 	api := humago.New(router, config)
 
-	// 4. Wire dependencies (Clean Architecture)
-	userRepo := repository.NewUserEntRepository(client)
-	userUC := usecase.NewUserUsecase(userRepo)
+	// 4. Wire dependencies (Feature Modules)
+	userRepo := userrepo.NewEntRepository(client)
+	userUC := useruc.NewUsecase(userRepo)
 
 	// 5. Register Routes
-	deliveryHTTP.RegisterUserRoutes(api, userUC)
+	userhttp.RegisterRoutes(api, userUC)
 
 	// 6. Start Server
 	log.Println("Server is running on http://localhost:8080")

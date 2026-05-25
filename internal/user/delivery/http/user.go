@@ -4,13 +4,12 @@ import (
 	"context"
 	"net/http"
 
-	"backend-golang/internal/domain"
+	"backend-golang/internal/user"
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/google/uuid"
 )
 
-// CreateUserRequest represents the input for creating a user.
 type CreateUserRequest struct {
 	Body struct {
 		Name  string `json:"name" doc:"User's full name" example:"John Doe" maxLength:"100"`
@@ -20,7 +19,7 @@ type CreateUserRequest struct {
 
 type UserResponse struct {
 	Body struct {
-		Data *domain.User `json:"data"`
+		Data *user.User `json:"data"`
 	}
 }
 
@@ -30,7 +29,7 @@ type GetUserRequest struct {
 
 type ListUsersResponse struct {
 	Body struct {
-		Data []*domain.User `json:"data"`
+		Data []*user.User `json:"data"`
 	}
 }
 
@@ -42,8 +41,7 @@ type DeleteUserResponse struct {
 	Status int `doc:"204 No Content"`
 }
 
-func RegisterUserRoutes(api huma.API, userUC domain.UserUsecase) {
-	// POST /users
+func RegisterRoutes(api huma.API, uc user.Usecase) {
 	huma.Register(api, huma.Operation{
 		OperationID: "create-user",
 		Method:      http.MethodPost,
@@ -52,16 +50,15 @@ func RegisterUserRoutes(api huma.API, userUC domain.UserUsecase) {
 		Description: "Creates a new user with the given name and email.",
 		Tags:        []string{"Users"},
 	}, func(ctx context.Context, input *CreateUserRequest) (*UserResponse, error) {
-		user, err := userUC.CreateUser(ctx, input.Body.Name, input.Body.Email)
+		usr, err := uc.CreateUser(ctx, input.Body.Name, input.Body.Email)
 		if err != nil {
 			return nil, huma.Error500InternalServerError("failed to create user", err)
 		}
 		resp := &UserResponse{}
-		resp.Body.Data = user
+		resp.Body.Data = usr
 		return resp, nil
 	})
 
-	// GET /users/{id}
 	huma.Register(api, huma.Operation{
 		OperationID: "get-user",
 		Method:      http.MethodGet,
@@ -69,16 +66,15 @@ func RegisterUserRoutes(api huma.API, userUC domain.UserUsecase) {
 		Summary:     "Get a user by ID",
 		Tags:        []string{"Users"},
 	}, func(ctx context.Context, input *GetUserRequest) (*UserResponse, error) {
-		user, err := userUC.GetUser(ctx, input.ID)
+		usr, err := uc.GetUser(ctx, input.ID)
 		if err != nil {
 			return nil, huma.Error404NotFound("user not found", err)
 		}
 		resp := &UserResponse{}
-		resp.Body.Data = user
+		resp.Body.Data = usr
 		return resp, nil
 	})
 
-	// GET /users
 	huma.Register(api, huma.Operation{
 		OperationID: "list-users",
 		Method:      http.MethodGet,
@@ -86,20 +82,19 @@ func RegisterUserRoutes(api huma.API, userUC domain.UserUsecase) {
 		Summary:     "List all users",
 		Tags:        []string{"Users"},
 	}, func(ctx context.Context, input *struct{}) (*ListUsersResponse, error) {
-		users, err := userUC.ListUsers(ctx)
+		users, err := uc.ListUsers(ctx)
 		if err != nil {
 			return nil, huma.Error500InternalServerError("failed to fetch users", err)
 		}
 		resp := &ListUsersResponse{}
 		if users == nil {
-			resp.Body.Data = make([]*domain.User, 0)
+			resp.Body.Data = make([]*user.User, 0)
 		} else {
 			resp.Body.Data = users
 		}
 		return resp, nil
 	})
 
-	// DELETE /users/{id}
 	huma.Register(api, huma.Operation{
 		OperationID: "delete-user",
 		Method:      http.MethodDelete,
@@ -107,7 +102,7 @@ func RegisterUserRoutes(api huma.API, userUC domain.UserUsecase) {
 		Summary:     "Delete a user by ID",
 		Tags:        []string{"Users"},
 	}, func(ctx context.Context, input *DeleteUserRequest) (*DeleteUserResponse, error) {
-		err := userUC.DeleteUser(ctx, input.ID)
+		err := uc.DeleteUser(ctx, input.ID)
 		if err != nil {
 			return nil, huma.Error500InternalServerError("failed to delete user", err)
 		}
