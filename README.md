@@ -105,3 +105,21 @@ This project uses **Huma** tightly integrated with standard `net/http`. The docu
 3. Alternatively, you can view the raw OpenAPI JSON specification at: [http://localhost:8080/openapi.json](http://localhost:8080/openapi.json).
 
 If you want to add a new route to the documentation, simply use `huma.Register` in `internal/delivery/http/user_handler.go` and define your request/response struct types. Huma handles the rest!
+
+---
+
+## 5. Testing
+
+This project supports both fast unit tests and full integration tests using [Testcontainers](https://golang.testcontainers.org/).
+
+**Run fast/unit tests:**
+Skips tests that spin up external containers.
+```bash
+make test
+```
+
+**Run full integration tests:**
+Spins up isolated PostgreSQL containers in the background automatically (runs lightning fast on Mac with OrbStack!) and runs tests against a real database.
+```bash
+make test-integration
+```

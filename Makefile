@@ -1,4 +1,4 @@
-.PHONY: run generate tidy migrate atlas-install apply
+.PHONY: run generate tidy migrate atlas-install apply test test-integration
 
 run:
 	go run cmd/api/main.go
@@ -8,6 +8,12 @@ generate:
 
 tidy:
 	go mod tidy
+
+test:
+	go test -short ./...
+
+test-integration:
+	go test ./... -v
 
 migrate:
 	@if [ -z "$(name)" ]; then \
