@@ -18,6 +18,7 @@ import (
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/danielgtaylor/huma/v2/adapters/humago"
+	"github.com/google/uuid"
 	_ "github.com/lib/pq"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
@@ -122,6 +123,8 @@ func TestUserAndAuthAPI_Integration(t *testing.T) {
 		jwtToken = actualResp.Token
 	})
 
+	var userID uuid.UUID
+	
 	t.Run("Get My Profile (Protected)", func(t *testing.T) {
 		req, _ := http.NewRequest(http.MethodGet, ts.URL+"/users/me", nil)
 		req.Header.Set("Authorization", "Bearer "+jwtToken)
@@ -138,7 +141,8 @@ func TestUserAndAuthAPI_Integration(t *testing.T) {
 
 		var fetchResp struct {
 			Data struct {
-				Email string `json:"email"`
+				ID    uuid.UUID `json:"id"`
+				Email string    `json:"email"`
 			} `json:"data"`
 		}
 		if err := json.NewDecoder(resp.Body).Decode(&fetchResp); err != nil {
@@ -147,6 +151,7 @@ func TestUserAndAuthAPI_Integration(t *testing.T) {
 		if fetchResp.Data.Email != "auth@test.com" {
 			t.Errorf("expected email auth@test.com, got %s", fetchResp.Data.Email)
 		}
+		userID = fetchResp.Data.ID
 	})
 
 	t.Run("Get My Profile (Unauthorized)", func(t *testing.T) {
@@ -160,6 +165,31 @@ func TestUserAndAuthAPI_Integration(t *testing.T) {
 
 		if resp.StatusCode != http.StatusUnauthorized && resp.StatusCode != 422 { // Huma might throw 422 if header is required
 			t.Fatalf("expected status 401 or 422, got %d", resp.StatusCode)
+		}
+	})
+
+	t.Run("Get User Detail (Public)", func(t *testing.T) {
+		resp, err := http.Get(ts.URL + "/users/" + userID.String())
+		if err != nil {
+			t.Fatalf("failed to make GET request: %v", err)
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusOK {
+			t.Fatalf("expected status OK, got %d", resp.StatusCode)
+		}
+
+		var detailResp struct {
+			Data struct {
+				ID    uuid.UUID `json:"id"`
+				Email string    `json:"email"`
+			} `json:"data"`
+		}
+		if err := json.NewDecoder(resp.Body).Decode(&detailResp); err != nil {
+			t.Fatalf("failed to decode get response: %v", err)
+		}
+		if detailResp.Data.Email != "auth@test.com" {
+			t.Errorf("expected email auth@test.com, got %s", detailResp.Data.Email)
 		}
 	})
 

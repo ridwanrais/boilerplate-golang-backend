@@ -7,7 +7,18 @@ import (
 	"backend-golang/internal/user"
 
 	"github.com/danielgtaylor/huma/v2"
+	"github.com/google/uuid"
 )
+
+type GetUserRequest struct {
+	ID uuid.UUID `path:"id" doc:"User ID"`
+}
+
+type UserResponse struct {
+	Body struct {
+		Data *user.User `json:"data"`
+	}
+}
 
 type ListUsersResponse struct {
 	Body struct {
@@ -16,6 +27,22 @@ type ListUsersResponse struct {
 }
 
 func RegisterPublicUserRoutes(api huma.API, uc user.PublicUsecase) {
+	huma.Register(api, huma.Operation{
+		OperationID: "get-user",
+		Method:      http.MethodGet,
+		Path:        "/users/{id}",
+		Summary:     "Get user by ID",
+		Tags:        []string{"Users"},
+	}, func(ctx context.Context, input *GetUserRequest) (*UserResponse, error) {
+		usr, err := uc.GetUser(ctx, input.ID)
+		if err != nil {
+			return nil, huma.Error404NotFound("user not found", err)
+		}
+		resp := &UserResponse{}
+		resp.Body.Data = usr
+		return resp, nil
+	})
+
 	huma.Register(api, huma.Operation{
 		OperationID: "list-users",
 		Method:      http.MethodGet,

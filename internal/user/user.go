@@ -28,5 +28,6 @@ type MyUsecase interface {
 }
 
 type PublicUsecase interface {
+	GetUser(ctx context.Context, id uuid.UUID) (*User, error)
 	ListUsers(ctx context.Context) ([]*User, error)
 }
